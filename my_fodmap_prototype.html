@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>My FODMAP</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f5f7f5;color:#17301f}
+.app{max-width:430px;margin:auto;min-height:100vh;background:#fff;position:relative;padding-bottom:78px}
+header{padding:26px 20px 14px;background:#eaf5ea}h1{margin:0;font-size:28px}p{color:#5d6d61}
+.screen{padding:18px 20px}.search{display:flex;gap:8px}.search input{flex:1;padding:15px;border:1px solid #ccd8ce;border-radius:14px;font-size:16px}.btn{border:0;border-radius:14px;padding:14px 16px;background:#286b3c;color:white;font-weight:700;font-size:15px}.card{padding:17px;margin:12px 0;border:1px solid #dce5de;border-radius:18px;background:#fff;box-shadow:0 2px 10px #00000008}.food{display:flex;justify-content:space-between;align-items:center}.badge{padding:7px 10px;border-radius:20px;font-size:12px;font-weight:800}.high{background:#ffd9d9;color:#9b2226}.medium{background:#fff0c2;color:#805b00}.low{background:#d9f3df;color:#17632b}.nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);max-width:430px;width:100%;display:flex;background:white;border-top:1px solid #ddd;padding:9px 5px calc(9px + env(safe-area-inset-bottom));z-index:5}.nav button{flex:1;border:0;background:none;color:#637067;font-size:12px}.nav button strong{display:block;font-size:20px;margin-bottom:2px}.hidden{display:none}.back{border:0;background:none;font-size:15px;padding:0 0 10px;color:#286b3c}.choice{width:100%;margin:7px 0;background:#f2f7f3;color:#17301f;border:1px solid #d4e1d7}.note{width:100%;min-height:90px;border:1px solid #ccd8ce;border-radius:12px;padding:12px;font-size:15px}.small{font-size:13px}
+</style>
+</head>
+<body>
+<div class="app">
+<header><h1>My FODMAP</h1><p>Understand food. Learn your tolerance.</p></header>
+
+<section id="home" class="screen">
+  <div class="search"><input id="homeSearch" placeholder="Search a food..." onkeydown="if(event.key==='Enter') searchFood()"><button class="btn" onclick="searchFood()">Search</button></div>
+  <button class="btn" style="width:100%;margin-top:12px" onclick="show('scan')">📷 Scan a barcode</button>
+  <div class="card"><b>How it works</b><p class="small">The app starts with general FODMAP information, then learns from your own tolerance records.</p></div>
+  <h3>Try these</h3>
+  <div id="quick"></div>
+</section>
+
+<section id="search" class="screen hidden">
+  <button class="back" onclick="show('home')">← Home</button><h2>Food search</h2><div id="results"></div>
+</section>
+
+<section id="food" class="screen hidden">
+  <button class="back" onclick="show('search')">← Search</button><div id="foodDetail"></div>
+</section>
+
+<section id="tolerance" class="screen hidden">
+  <button class="back" onclick="show('food')">← Food</button><h2>Your experience</h2><p id="tolName"></p>
+  <button class="btn choice" onclick="saveTol('Tolerated')">🟢 I tolerate this</button>
+  <button class="btn choice" onclick="saveTol('Small amount only')">🟠 Small amount only</button>
+  <button class="btn choice" onclick="saveTol('Did not tolerate')">🔴 I did not tolerate this</button>
+  <textarea id="note" class="note" placeholder="Optional notes — serving size, symptoms, preparation..."></textarea>
+</section>
+
+<section id="myfoods" class="screen hidden"><h2>❤️ My foods</h2><div id="myList"></div></section>
+
+<section id="scan" class="screen hidden">
+<button class="back" onclick="show('home')">← Home</button><h2>📷 Barcode scanner</h2>
+<div class="card"><p>This prototype reserves the scanner flow. On the real phone version, this button will open the camera and send the barcode to the product database.</p>
+<button class="btn" onclick="demoScan()">Simulate a scan</button></div><div id="scanResult"></div>
+</section>
+
+<nav class="nav"><button onclick="show('home')"><strong>🏠</strong>Home</button><button onclick="show('search');searchFood('')"><strong>🔎</strong>Search</button><button onclick="show('scan')"><strong>📷</strong>Scan</button><button onclick="show('myfoods');renderMy()"><strong>❤️</strong>My foods</button></nav>
+</div>
+
+<script>
+const foods=[
+{name:"Onion",level:"High",serving:"Small portions may still be problematic",note:"Generally high FODMAP due to fructans."},
+{name:"Garlic",level:"High",serving:"Portion dependent",note:"Generally high FODMAP; garlic-infused oil can be different."},
+{name:"Milk",level:"High",serving:"Lactose is the main issue",note:"Lactose-free milk is a common alternative."},
+{name:"Carrot",level:"Low",serving:"Typical portions",note:"Generally low FODMAP."},
+{name:"Rice",level:"Low",serving:"Typical portions",note:"Naturally gluten free and generally low FODMAP."},
+{name:"Wheat bread",level:"Medium",serving:"Portion dependent",note:"FODMAP content depends on product and serving."}
+];
+let current=null;
+let personal=JSON.parse(localStorage.getItem("myfodmap")||"{}");
+
+function show(id){document.querySelectorAll("section").forEach(x=>x.classList.add("hidden"));document.getElementById(id).classList.remove("hidden");if(id==="myfoods")renderMy()}
+function searchFood(q){q=(q??document.getElementById("homeSearch").value).trim().toLowerCase();show("search");let list=foods.filter(f=>!q||f.name.toLowerCase().includes(q));document.getElementById("results").innerHTML=list.length?list.map(f=>`<div class="card food" onclick='openFood(${JSON.stringify(f.name)})'><div><b>${f.name}</b><p class="small">${f.serving}</p></div><span class="badge ${f.level.toLowerCase()}">${f.level}</span></div>`).join(""):"<p>No prototype match yet. The full version will use a much larger food/product database.</p>"}
+function openFood(name){current=foods.find(f=>f.name===name);show("food");let p=personal[name];document.getElementById("foodDetail").innerHTML=`<h2>${current.name}</h2><span class="badge ${current.level.toLowerCase()}">${current.level} FODMAP</span><div class="card"><b>General information</b><p>${current.note}</p><b>Serving</b><p>${current.serving}</p></div><div class="card"><b>Your profile</b><p>${p?`You recorded: <strong>${p.status}</strong><br>${p.note||""}`:"You haven't recorded your tolerance yet."}</p><button class="btn" onclick="showTol()">Record your experience</button></div>`}
+function showTol(){document.getElementById("tolName").textContent="Recording your experience with "+current.name;document.getElementById("note").value="";show("tolerance")}
+function saveTol(status){personal[current.name]={status,note:document.getElementById("note").value};localStorage.setItem("myfodmap",JSON.stringify(personal));openFood(current.name)}
+function renderMy(){let keys=Object.keys(personal);document.getElementById("myList").innerHTML=keys.length?keys.map(k=>`<div class="card food"><div><b>${k}</b><p class="small">${personal[k].status}${personal[k].note?` — ${personal[k].note}`:""}</p></div></div>`).join(""):"<p>You haven't recorded any foods yet.</p>"}
+function demoScan(){current=foods.find(f=>f.name==="Wheat bread");document.getElementById("scanResult").innerHTML=`<div class="card"><b>Demo product found</b><p>Wheat bread</p><button class="btn" onclick="openFood('Wheat bread')">View FODMAP result</button></div>`}
+document.getElementById("quick").innerHTML=foods.slice(0,4).map(f=>`<button class="btn choice" onclick="openFood('${f.name}')">${f.name}</button>`).join("");
+</script>
+</body></html>
