@@ -142,10 +142,17 @@ function showTol(){selectedSymptoms=[];document.getElementById("toName").textCon
 function renderSymptoms(){document.getElementById("symptomButtons").innerHTML=symptomOptions.map(s=>`<button type="button" class="${selectedSymptoms.includes(s)?"selected":""}" onclick="toggleSymptom('${s}')">${s}</button>`).join("")}
 function toggleSymptom(s){if(s==="No symptoms")selectedSymptoms=["No symptoms"];else{selectedSymptoms=selectedSymptoms.filter(x=>x!=="No symptoms");selectedSymptoms=selectedSymptoms.includes(s)?selectedSymptoms.filter(x=>x!==s):[...selectedSymptoms,s]}renderSymptoms()}
 function saveTol(){
- if(!selectedSymptoms.length)selectedSymptoms=["No symptoms"];
- if(!personal[current.name])personal[current.name]=[];
- personal[current.name].push({portion:document.getElementById("portion").value,symptoms:[...selectedSymptoms],note:document.getElementById("note").value.trim(),date:new Date().toLocaleDateString("en-GB")});
- localStorage.setItem("myfodmap",JSON.stringify(personal));openFood(current.name);
+ try{
+  if(!selectedSymptoms.length)selectedSymptoms=["No symptoms"];
+  if(!current||!current.name)throw new Error("No food selected");
+  if(!personal[current.name])personal[current.name]=[];
+  personal[current.name].push({portion:document.getElementById("portion").value,symptoms:[...selectedSymptoms],note:document.getElementById("note").value.trim(),date:new Date().toLocaleDateString("en-GB")});
+  localStorage.setItem("myfodmap",JSON.stringify(personal));
+  openFood(current.name);
+ }catch(e){
+  alert("We couldn't save this entry on this device. Please try again. If it still won't save, reload the app and try once more.");
+  console.error(e);
+ }
 }
 function historyHTML(name){return (personal[name]||[]).slice().reverse().map(x=>`<div class="card"><b>${x.date}</b> • ${x.portion} portion<br><span class="small">${x.symptoms.join(", ")}</span>${x.note?`<p class="small">Note: ${escapeHTML(x.note)}</p>`:""}</div>`).join("")}
 function escapeHTML(t){return t.replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]))}
