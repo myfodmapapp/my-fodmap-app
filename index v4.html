@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#2f7d45">
+<title>My FODMAP</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f3f6f3;color:#17301f}
+.app{max-width:520px;margin:auto;min-height:100vh;background:#fff;padding-bottom:88px}
+header{padding:24px 20px 18px;background:#eaf5ea}
+h1{margin:0;color:#285c35;font-size:30px}h2{margin:8px 0 12px}h3{margin:12px 0 7px}p{line-height:1.45}
+.screen{padding:18px 20px}.hidden{display:none}
+.search{display:flex;gap:8px}.search input{flex:1;padding:15px;border:1px solid #ccd8ce;border-radius:14px;font-size:16px}
+.btn{display:block;width:100%;min-height:48px;border:0;border-radius:12px;padding:12px;font-size:15px;margin:9px 0;background:#dff0e2;color:#17301f}
+.btn.primary{background:#2f7d45;color:#fff}.btn.choice{text-align:left;background:#f7faf7;border:1px solid #ccd8ce}.btn.secondary{background:#eef3ef}
+.card{background:#f8faf8;border:1px solid #dce5dd;border-radius:16px;padding:15px;margin:12px 0}
+.small{font-size:13px;color:#5d6b61}.badge{display:inline-block;padding:6px 10px;border-radius:20px;background:#e6f2e8;margin:3px;font-size:13px}
+.badge.high{background:#ffe4e4}.badge.medium{background:#fff0cf}.badge.low{background:#e5f5e8}.badge.personal{background:#dff0e2}
+textarea,select,input[type=text],input[type=date]{width:100%;padding:13px;border:1px solid #ccd8ce;border-radius:12px;font-size:15px;margin:6px 0 12px;background:#fff}
+label{font-weight:600;display:block;margin-top:8px}
+.nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:min(520px,100%);display:flex;background:#fff;border-top:1px solid #dce5dd;padding:7px 4px calc(7px + env(safe-area-inset-bottom));z-index:10}
+.nav button{flex:1;border:0;background:#fff;font-size:11px;padding:7px;color:#405348}.nav strong{display:block;font-size:19px}
+.warning{background:#fff5d9;border:1px solid #ecd58a;border-radius:12px;padding:12px;margin:10px 0}
+.success{background:#e7f5e9;border:1px solid #b8dbbd;border-radius:12px;padding:12px;margin:10px 0}
+.symptoms{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:10px}.symptoms button{border:1px solid #ccd8ce;background:#fff;border-radius:20px;padding:9px 11px}.symptoms button.selected{background:#dff0e2;border-color:#5b9b69}
+.foodrow{display:flex;justify-content:space-between;align-items:center;gap:8px}.ingredient{padding:10px 0;border-bottom:1px solid #e3e9e4}.ingredient:last-child{border-bottom:0}
+.statgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.stat{background:#f8faf8;border:1px solid #dce5dd;border-radius:14px;padding:13px}.stat b{font-size:22px}
+.quick{display:grid;grid-template-columns:1fr 1fr;gap:8px}.quick button{margin:0}.divider{height:1px;background:#e3e9e4;margin:14px 0}
+.pattern{border-left:4px solid #5b9b69;padding-left:11px;margin:10px 0}
+</style>
+</head>
+<body><div class="app">
+<header><h1>My FODMAP</h1><p>Understand food. Learn your tolerance.</p></header>
+
+<section id="home" class="screen">
+<div class="search"><input id="homeSearch" placeholder="Search a food or ingredient..." onkeydown="if(event.key==='Enter')searchFood()"></div>
+<button class="btn primary" onclick="searchFood()">🔎 Search foods</button>
+<button class="btn" onclick="show('scan')">📷 Scan a product</button>
+<div class="card"><b>🧠 Your personal learning</b><p id="homeLearning" class="small"></p><button class="btn secondary" onclick="show('learning');renderLearning()">View my learning</button></div>
+<div class="card"><b>🕵️ Ingredient Detective</b><p class="small">Compare ingredients in foods you've tolerated with foods where you've recorded symptoms.</p><button class="btn secondary" onclick="show('detective');renderDetective()">Open Ingredient Detective</button></div>
+<h3>Quick search</h3><div id="quick" class="quick"></div>
+</section>
+
+<section id="search" class="screen hidden"><button class="btn" onclick="show('home')">← Home</button><h2>Food search</h2><div class="search"><input id="searchBox" placeholder="Search foods or ingredients..." oninput="renderResults()"></div><div id="results"></div></section>
+
+<section id="food" class="screen hidden"><button class="btn" onclick="show('search')">← Search</button><div id="foodDetail"></div></section>
+
+<section id="tolerance" class="screen hidden"><button class="btn" onclick="show('food')">← Food</button><h2>🧪 Record your experience</h2><p id="toName"></p>
+<label>How much did you eat?</label><select id="portion"><option>Small</option><option>Medium</option><option>Large</option></select>
+<label>What happened?</label><div class="symptoms" id="symptomButtons"></div>
+<label>Date</label><input id="experienceDate" type="date">
+<label>Notes</label><textarea id="note" placeholder="Serving size, preparation, timing, symptoms..."></textarea>
+<button class="btn primary" onclick="saveTol()">Save experience</button></section>
+
+<section id="myfoods" class="screen hidden"><h2>❤️ My Foods</h2><div class="card"><b>Your personal records</b><p class="small">Your results are personal observations, not a medical diagnosis.</p></div><div id="myList"></div></section>
+
+<section id="scan" class="screen hidden"><button class="btn" onclick="show('home')">← Home</button><h2>📷 Scan a product</h2><div class="card"><h3>Barcode scanner</h3><p class="small">This prototype simulates the scan. The next stage can connect the camera to a product database.</p><button class="btn primary" onclick="demoScan()">Simulate barcode scan</button></div><div id="scanResult"></div></section>
+
+<section id="detective" class="screen hidden"><button class="btn" onclick="show('home')">← Home</button><h2>🕵️ Ingredient Detective</h2><p class="small">Patterns can be useful clues, but they do not prove that an ingredient caused symptoms.</p><div id="detectiveContent"></div></section>
+
+<section id="learning" class="screen hidden"><button class="btn" onclick="show('home')">← Home</button><h2>🧠 My Learning</h2><div id="learningContent"></div></section>
+
+<nav class="nav">
+<button onclick="show('home')"><strong>🏠</strong>Home</button>
+<button onclick="show('search');document.getElementById('searchBox').value='';renderResults()"><strong>🔎</strong>Search</button>
+<button onclick="show('myfoods');renderMy()"><strong>❤️</strong>My Foods</button>
+<button onclick="show('detective');renderDetective()"><strong>🕵️</strong>Detective</button>
+<button onclick="show('scan')"><strong>📷</strong>Scan</button>
+</nav>
+</div>
+
+<script>
+const foods=[
+{name:'Onion',level:'High',fodmap:'Fructans',note:'Onion is high in fructans and portion can matter.',ingredients:['Onion'],alternatives:['Garlic-infused oil','Chives','Spring onion green tops']},
+{name:'Garlic',level:'High',fodmap:'Fructans',note:'Garlic is high in fructans.',ingredients:['Garlic'],alternatives:['Garlic-infused oil','Chives']},
+{name:'Milk',level:'High',fodmap:'Lactose',note:'Ordinary milk contains lactose.',ingredients:['Milk','Lactose'],alternatives:['Lactose-free milk','Suitable plant-based milk']},
+{name:'Carrot',level:'Low',fodmap:'Generally low',note:'Generally low FODMAP at typical portions.',ingredients:['Carrot'],alternatives:['Courgette','Potato','Parsnip']},
+{name:'Rice',level:'Low',fodmap:'Generally low',note:'Plain rice is naturally gluten-free and generally low FODMAP.',ingredients:['Rice'],alternatives:['Potato','Quinoa','Corn']},
+{name:'Wheat bread',level:'Medium',fodmap:'Fructans',note:'FODMAP content varies with ingredients, processing and portion.',ingredients:['Wheat flour','Yeast','Water','Salt','Possible additives'],alternatives:['Known-ingredient homemade bread','Suitable gluten-free bread','Appropriate long-fermented sourdough']},
+{name:'Potato',level:'Low',fodmap:'Generally low',note:'Plain potato is generally low FODMAP.',ingredients:['Potato'],alternatives:['Rice','Quinoa','Polenta']},
+{name:'Egg',level:'Low',fodmap:'No FODMAP carbohydrate',note:'Eggs contain no FODMAP carbohydrate.',ingredients:['Egg'],alternatives:['Plain chicken','Fish','Firm tofu']},
+{name:'Chicken',level:'Low',fodmap:'No FODMAP carbohydrate',note:'Plain chicken is naturally low FODMAP; sauces can change the result.',ingredients:['Chicken'],alternatives:['Turkey','Fish','Eggs']},
+{name:'Apple',level:'High',fodmap:'Fructose + sorbitol',note:'Apples contain excess fructose and sorbitol.',ingredients:['Apple','Fructose','Sorbitol'],alternatives:['Kiwi','Orange','Strawberries']},
+{name:'Banana',level:'Medium',fodmap:'Ripeness dependent',note:'FODMAP content can change as banana ripens.',ingredients:['Banana'],alternatives:['Kiwi','Grapes','Strawberries']}
+];
+
+let current=null,selectedSymptoms=[];
+let personal=load('myfodmap_experiences',{});
+const symptomOptions=['No symptoms','Bloating','Wind','Abdominal pain','Diarrhoea','Constipation','Other'];
+
+function load(k,f){try{return JSON.parse(localStorage.getItem(k)||JSON.stringify(f))}catch(e){return f}}
+function save(){localStorage.setItem('myfodmap_experiences',JSON.stringify(personal))}
+function getFood(name){return foods.find(f=>f.name===name)}
+function recordType(r){return r.symptoms.includes('No symptoms')?'good':'symptom'}
+function recordStats(f){
+ const a=personal[f.name]||[];
+ const good=a.filter(r=>recordType(r)==='good').length;
+ const bad=a.filter(r=>recordType(r)==='symptom').length;
+ return {total:a.length,good,bad};
+}
+function summary(f){
+ const s=recordStats(f);
+ if(!s.total)return '⚪ Not tested yet';
+ if(s.bad===0)return `🟢 ${s.good}/${s.total} with no symptoms`;
+ if(s.good>0)return `🟠 ${s.good} no-symptom · ${s.bad} symptom`;
+ return `🔴 ${s.bad} symptom record${s.bad===1?'':'s'}`;
+}
+function show(id){
+ document.querySelectorAll('section').forEach(s=>s.classList.add('hidden'));
+ document.getElementById(id).classList.remove('hidden');
+ window.scrollTo(0,0);
+ if(id==='home')renderHome();
+ if(id==='myfoods')renderMy();
+ if(id==='learning')renderLearning();
+ if(id==='detective')renderDetective();
+}
+function searchFood(){
+ const q=document.getElementById('homeSearch').value.trim();
+ show('search');document.getElementById('searchBox').value=q;renderResults();
+}
+function renderResults(){
+ const q=document.getElementById('searchBox').value.toLowerCase().trim();
+ const list=foods.filter(f=>!q||f.name.toLowerCase().includes(q)||f.fodmap.toLowerCase().includes(q)||f.ingredients.join(' ').toLowerCase().includes(q)||f.alternatives.join(' ').toLowerCase().includes(q));
+ document.getElementById('results').innerHTML=list.length?list.map(f=>`<button class="btn choice" onclick="openFood('${f.name}')"><div class="foodrow"><b>${f.name}</b><span class="badge ${f.level.toLowerCase().includes('low')?'low':f.level.toLowerCase().includes('high')?'high':'medium'}">${f.level}</span></div><span class="small">${f.fodmap} • ${summary(f)}</span></button>`).join(''):'<div class="card">No food found. Try an ingredient such as onion, fructans or lactose.</div>';
+}
+function openFood(name){
+ current=getFood(name);if(!current)return;show('food');
+ const p=personal[current.name]||[],s=recordStats(current);
+ let h=`<h2>${current.name}</h2><span class="badge">General guidance: ${current.level}</span><p><b>Main FODMAP:</b> ${current.fodmap}</p><p class="small">${current.note}</p>`;
+ h+=`<div class="card"><b>🧠 Your personal result</b><p>${summary(current)}</p>${p.length?`<p class="small">No symptoms: <b>${s.good}</b> · Symptoms: <b>${s.bad}</b> · ${s.total} total experience${s.total===1?'':'s'}</p>`:'<span class="small">You have not recorded this food yet.</span>'}</div>`;
+ h+=`<button class="btn primary" onclick="showTol()">🧪 Record my tolerance</button>`;
+ h+=`<div class="card"><h3>🔎 Ingredient breakdown</h3>${current.ingredients.map(i=>`<div class="ingredient"><b>${i}</b><br><span class="small">${explain(i)}</span></div>`).join('')}</div>`;
+ h+=`<div class="card"><h3>💡 Alternatives</h3>${current.alternatives.map(a=>`<span class="badge">${a}</span>`).join('')}</div>`;
+ if(p.length)h+=`<div class="card"><h3>📚 Your history</h3>${p.slice().reverse().map(r=>`<div class="divider"></div><b>${r.date||''} • ${r.portion}</b><p class="small">${r.symptoms.join(', ')}${r.note?' — '+r.note:''}</p>`).join('')}</div>`;
+ document.getElementById('foodDetail').innerHTML=h;
+}
+function explain(i){
+ const m={Onion:'Contains fructans.',Garlic:'Contains fructans.',Milk:'Contains lactose.',Lactose:'A FODMAP carbohydrate in ordinary dairy milk.','Wheat flour':'Wheat can contribute fructans; amount and processing matter.',Yeast:'Used in fermentation; processing affects the finished food.',Water:'Not a FODMAP concern.',Salt:'Not a FODMAP concern.',Rice:'Generally low FODMAP.',Carrot:'Generally low FODMAP at typical portions.',Potato:'Generally low FODMAP when plain.',Egg:'No FODMAP carbohydrate.',Chicken:'No FODMAP carbohydrate when plain.',Apple:'Contains excess fructose and sorbitol.',Fructose:'A FODMAP carbohydrate when present in excess.',Sorbitol:'A polyol FODMAP.'};
+ return m[i]||'Check the full ingredient list and portion.';
+}
+function showTol(){
+ show('tolerance');document.getElementById('toName').innerHTML=`Recording: <b>${current.name}</b>`;
+ selectedSymptoms=[];document.getElementById('portion').value='Small';
+ document.getElementById('experienceDate').value=new Date().toISOString().slice(0,10);
+ document.getElementById('note').value='';renderSymptoms();
+}
+function renderSymptoms(){document.getElementById('symptomButtons').innerHTML=symptomOptions.map(s=>`<button class="${selectedSymptoms.includes(s)?'selected':''}" onclick="toggleSymptom('${s}')">${s}</button>`).join('')}
+function toggleSymptom(s){
+ if(s==='No symptoms')selectedSymptoms=['No symptoms'];
+ else{selectedSymptoms=selectedSymptoms.filter(x=>x!=='No symptoms');selectedSymptoms.includes(s)?selectedSymptoms=selectedSymptoms.filter(x=>x!==s):selectedSymptoms.push(s)}
+ renderSymptoms();
+}
+function saveTol(){
+ if(!selectedSymptoms.length){alert('Please choose what happened.');return}
+ if(!personal[current.name])personal[current.name]=[];
+ personal[current.name].push({date:document.getElementById('experienceDate').value,portion:document.getElementById('portion').value,symptoms:selectedSymptoms.slice(),note:document.getElementById('note').value.trim()});
+ save();openFood(current.name);
+}
+function renderHome(){
+ const total=totalRecords(),foodsCount=Object.keys(personal).length;
+ document.getElementById('homeLearning').textContent=total?`${total} experience${total===1?'':'s'} recorded across ${foodsCount} food${foodsCount===1?'':'s'}.`:'Start recording foods and the app will build your personal pattern over time.';
+ document.getElementById('quick').innerHTML=foods.slice(0,6).map(f=>`<button class="btn choice" onclick="openFood('${f.name}')">${f.name}</button>`).join('');
+}
+function totalRecords(){return Object.values(personal).reduce((n,a)=>n+a.length,0)}
+function renderMy(){
+ const names=Object.keys(personal);
+ document.getElementById('myList').innerHTML=names.length?names.map(n=>{const f=getFood(n),a=personal[n];return `<div class="card"><div class="foodrow"><h3>${n}</h3><span class="badge personal">${summary(f)}</span></div><p class="small">${a.length} record${a.length===1?'':'s'}</p><button class="btn secondary" onclick="openFood('${n}')">View food</button></div>`}).join(''):'<div class="card">No foods recorded yet. Search for a food and tap “Record my tolerance”.</div>';
+}
+function renderLearning(){
+ const names=Object.keys(personal);
+ if(!names.length){document.getElementById('learningContent').innerHTML='<div class="card">Your learning profile will appear here after you record some foods.</div>';return}
+ let good=0,bad=0;names.forEach(n=>(personal[n]||[]).forEach(r=>recordType(r)==='good'?good++:bad++));
+ document.getElementById('learningContent').innerHTML=`<div class="statgrid"><div class="stat"><b>${names.length}</b><br><span class="small">Foods tested</span></div><div class="stat"><b>${totalRecords()}</b><br><span class="small">Experiences</span></div></div><div class="card"><h3>Your current pattern</h3><p>🟢 No-symptom records: <b>${good}</b></p><p>🔴 Symptom records: <b>${bad}</b></p><p class="small">These are your recorded observations and should not be treated as a diagnosis.</p></div>${names.map(n=>`<button class="btn choice" onclick="openFood('${n}')"><b>${n}</b><br><span class="small">${summary(getFood(n))}</span></button>`).join('')}`;
+}
+function ingredientStats(){
+ const stats={};
+ Object.entries(personal).forEach(([food,recs])=>{
+   const f=getFood(food); if(!f)return;
+   recs.forEach(r=>{
+     const type=recordType(r);
+     f.ingredients.forEach(i=>{
+       if(!stats[i])stats[i]={symptomRecords:0,toleratedRecords:0,symptomFoods:new Set(),toleratedFoods:new Set()};
+       if(type==='symptom'){stats[i].symptomRecords++;stats[i].symptomFoods.add(food)}
+       else{stats[i].toleratedRecords++;stats[i].toleratedFoods.add(food)}
+     });
+   });
+ });
+ return stats;
+}
+function renderDetective(){
+ const stats=ingredientStats();
+ const rows=Object.entries(stats).sort((a,b)=>{
+   const ap=a[1],bp=b[1];
+   return (bp.symptomRecords-bp.toleratedRecords)-(ap.symptomRecords-ap.toleratedRecords);
+ });
+ if(!rows.length){
+   document.getElementById('detectiveContent').innerHTML='<div class="card">Record a few foods with symptoms and the Detective will compare them with foods you have tolerated.</div>';
+   return;
+ }
+ document.getElementById('detectiveContent').innerHTML=`<div class="warning"><b>How this works</b><br>The Detective compares ingredients in your own records. A pattern does not prove that an ingredient caused your symptoms.</div>`+
+ rows.map(([i,s])=>{
+   const mixed=s.symptomRecords>0&&s.toleratedRecords>0;
+   let message='';
+   if(s.symptomRecords>0&&s.toleratedRecords===0) message='<span class="small">Possible pattern in your records — this ingredient only appears in foods where you recorded symptoms so far.</span>';
+   else if(mixed) message='<span class="small">Mixed pattern — this ingredient also appears in foods you recorded as tolerated.</span>';
+   else message='<span class="small">No symptom-associated records for this ingredient so far.</span>';
+   return `<div class="card"><b>${i}</b><div class="pattern"><p>🔴 Seen with symptoms: <b>${s.symptomRecords}</b> record${s.symptomRecords===1?'':'s'} across <b>${s.symptomFoods.size}</b> food${s.symptomFoods.size===1?'':'s'}</p><p>🟢 Seen without symptoms: <b>${s.toleratedRecords}</b> record${s.toleratedRecords===1?'':'s'} across <b>${s.toleratedFoods.size}</b> food${s.toleratedFoods.size===1?'':'s'}</p>${message}</div></div>`;
+ }).join('');
+}
+function demoScan(){
+ document.getElementById('scanResult').innerHTML=`<div class="success"><b>Demo product found</b><p>Example product: Wheat bread</p><p class="small">Ingredients: wheat flour, water, yeast, salt.</p><button class="btn primary" onclick="openFood('Wheat bread')">View wheat bread information</button></div>`;
+}
+renderHome();renderResults();
+</script>
+</body>
+</html>
