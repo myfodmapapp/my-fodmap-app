@@ -7,14 +7,15 @@ async function getEngine() {
     enginePromise = PaddleOCR.create({
       lang: "en",
       ocrVersion: "PP-OCRv5",
-      worker: true,
       ortOptions: {
         backend: "wasm",
-        numThreads: 2,
+        wasmPaths: "https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/",
+        numThreads: 1,
         simd: true
       }
     });
   }
+
   return enginePromise;
 }
 
@@ -27,15 +28,20 @@ window.myFodmapPaddleOCR = async function (image) {
     textRecScoreThresh: 0.35
   });
 
+  if (!result || !Array.isArray(result.items)) {
+    throw new Error("PP-OCRv5 returned no OCR items");
+  }
+
   return result;
 };
 
-// Start loading after the page becomes interactive,
-// without slowing down the initial app screen.
+// Preload after first paint.
+// If PP-OCRv5 fails to load, My FODMAP can still use
+// the existing backup OCR instead of blocking the scanner.
 window.addEventListener("load", () => {
   setTimeout(() => {
     getEngine().catch(err =>
-      console.warn("PP-OCRv5 preload:", err)
+      console.warn("PP-OCRv5 preload failed:", err)
     );
-  }, 400);
+  }, 600);
 });
